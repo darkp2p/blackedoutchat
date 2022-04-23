@@ -5,7 +5,7 @@ A decentralized chat program that uses the Tor network to remain anonymous and p
 TODO
 
 ## TODO
-This is a project that I worked on and dropped a year ago. I'm rebuilding it from scratch (started on 24th April 2022).
+This is a project that I worked on and dropped a year ago. I'm rebuilding it from scratch (started on 23rd April 2022).
 
 - [x] Tor process wrapper
   - [x] Starting the process in a separate thread
