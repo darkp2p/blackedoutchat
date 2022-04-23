@@ -1,0 +1,28 @@
+[package]
+name = "blackedoutchat"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# Async stuff
+futures = "0.3"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "time", "macros"] }
+
+# Network stuff
+tokio-socks = "0.5"
+tokio-tungstenite = "0.17"
+
+# Cryptography
+aes-gcm = "0.9"
+pqcrypto = "0.15"
+sha3 = "0.10"
+
+# Utilities
+chrono = "0.4"
+ctrlc = { version = "3.2", features = ["termination"] }
+libc = "0.2"
+rand = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.5"
