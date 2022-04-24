@@ -17,7 +17,7 @@ This is a project that I worked on and dropped a year ago. I'm rebuilding it fro
 - [ ] P2P connections
   - [ ] Unix socket to listen to incoming connections from Tor
   - [ ] Interface to accept connection requests to other peers
-  - [ ] Global state to keep track of all connected peers
+  - [x] Global state to keep track of all connected peers
   - [ ] Authentication (to prove that the peer connecting to you is who they say they are)
     - [ ] Peer will send you the onion address that they claim to be
     - [ ] You will send a random 256-bit token to the peer
@@ -25,8 +25,8 @@ This is a project that I worked on and dropped a year ago. I'm rebuilding it fro
     - [ ] You will verify the signature by deriving the ed25519 public key from the onion address
     - [x] There is no need for you to prove who you are to them as they are the ones connecting to your onion address and Tor proves it internally
 - [ ] Cryptography (post-quantum hybrid approach)
-  - [ ] Tor already encrypts traffic with classical methods
-  - [ ] Post-quantum key exchange between peers
+  - [x] Tor already encrypts traffic with classical methods
+  - [x] Post-quantum key exchange between peers
   - [ ] A post-quantum public key must be shared between peers on first connect and saved. Use this to send tokens and verify signatures
 - [ ] Storage (chat messages, peer info, etc.)
   - [ ] Evaluate which method of data storage is most suitable
