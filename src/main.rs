@@ -3,6 +3,7 @@ mod config;
 mod crypto;
 mod error;
 mod handler;
+mod model;
 mod secure;
 mod state;
 mod tor;

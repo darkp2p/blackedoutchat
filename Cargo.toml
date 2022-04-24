@@ -9,6 +9,7 @@ edition = "2021"
 # Async stuff
 futures = "0.3"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "time", "macros"] }
+tokio-util = { version = "0.7", features = ["codec"] }
 
 # Network stuff
 tokio-socks = "0.5"
@@ -20,9 +21,12 @@ pqcrypto = "0.15"
 sha3 = "0.10"
 
 # Utilities
+bson = "2.2"
+bytes = "1.1"
 chrono = "0.4"
 ctrlc = { version = "3.2", features = ["termination"] }
 libc = "0.2"
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
+serde-big-array = "0.4"
 toml = "0.5"
