@@ -1,5 +1,6 @@
 mod client;
 mod config;
+mod connections;
 mod crypto;
 mod error;
 mod handler;
@@ -8,30 +9,25 @@ mod secure;
 mod state;
 mod tor;
 
-use futures::{
-    future::{ready, select_all},
-    FutureExt,
-};
+use futures::future::try_join3;
+use std::sync::{Arc, Mutex};
 
 use crate::config::Config;
-use crate::handler::Handler;
-use crate::tor::handler::TorHandler;
+use crate::connections::{incoming, outgoing};
+use crate::state::State;
 
 #[tokio::main]
 async fn main() {
     let config = Config::load();
+    let control = tor::spawn_tor(&config).expect("Failed to spawn Tor process");
 
-    if config.addresses.addresses.len() > 1 {
-        panic!("Blackedoutchat only supports 1 receiving address for now");
-    }
+    let state = Arc::new(Mutex::new(
+        State::new(&config).expect("Failed to initialize state"),
+    ));
 
-    let handlers = vec![
-        ready(tor::spawn_tor(&config).expect("Failed to start Tor process"))
-            .then(TorHandler::new)
-            .await
-            .unwrap()
-            .listen(),
-    ];
+    let a = tor::handle_tor(control);
+    let b = incoming::start_incoming(&config, state.clone());
+    let c = outgoing::start_outgoing(&config);
 
-    select_all(handlers).await.0.ok();
+    if let Err(e) = try_join3(a, b, c).await {}
 }

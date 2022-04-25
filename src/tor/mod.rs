@@ -1,5 +1,5 @@
 pub mod control;
-pub mod handler;
+pub mod onion;
 
 use std::{
     env,
@@ -11,14 +11,18 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use crate::config::Config;
-use crate::error::Result;
+use tokio::{net::UnixStream as AsyncUnixStream, time::sleep};
 
-pub fn spawn_tor(config: &Config) -> Result<(u32, UnixStream)> {
+use crate::config::Config;
+use crate::error::{BlackedoutError, Result};
+
+use self::control::execute_control;
+
+pub fn spawn_tor(config: &Config) -> Result<UnixStream> {
     create_dirs()?;
     create_tmprc(config)?;
 
-    let pid = spawn_process().and_then(|(pid, mut handle)| {
+    let _pid = spawn_process().and_then(|(pid, mut handle)| {
         ctrlc::set_handler(move || {
             handle.take().map(|handle| exit_handler((pid, handle)));
             exit(0);
@@ -32,7 +36,21 @@ pub fn spawn_tor(config: &Config) -> Result<(u32, UnixStream)> {
 
     thread::sleep(Duration::from_secs(5));
 
-    control::connect_to_control().map(|x| (pid, x))
+    control::connect_to_control()
+}
+
+pub async fn handle_tor(control: UnixStream) -> Result<()> {
+    let mut control = control
+        .set_nonblocking(true)
+        .and_then(|_| AsyncUnixStream::from_std(control))?;
+
+    loop {
+        execute_control(&mut control, "GETINFO status/circuit-established\r\n")
+            .await
+            .map_err(|e| BlackedoutError::TorShutdown(e.into()))?;
+
+        sleep(Duration::from_secs(2)).await;
+    }
 }
 
 fn create_dirs() -> Result<()> {
@@ -45,6 +63,7 @@ fn create_dirs() -> Result<()> {
     })?;
 
     fs::create_dir_all("data/tor")?;
+    fs::create_dir_all("data/incoming")?;
     fs::create_dir_all("data/logs")?;
     fs::create_dir_all("data/torrc.d")?;
 
@@ -71,7 +90,9 @@ fn create_tmprc(config: &Config) -> Result<()> {
         tmprc.push_str(
             &current
                 .join("data")
-                .join("blackedoutchat.sock")
+                .join(&x.name)
+                .join("incoming")
+                .with_extension("sock")
                 .to_string_lossy(),
         );
         tmprc.push_str("\n");

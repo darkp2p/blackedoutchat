@@ -3,10 +3,19 @@ pub enum BlackedoutError {
     AesBadLength,
     AesBadTag,
     AesEncryptionError,
+    BadHostname,
+    BadPublicKey,
+    BadSignature,
+    SignatureVerificationFailed,
+    Base32Error(data_encoding::DecodeError),
     BsonError(bson::de::Error),
+    ConnectionClosed,
+    TorBadHostname { address: String },
+    TorBadSecretKey { address: String },
     TorShutdown(Box<BlackedoutError>),
     Io(std::io::Error),
     PqCrypto(pqcrypto::traits::Error),
+    WrongPacketType { description: String },
 }
 
 pub type Result<T> = std::result::Result<T, BlackedoutError>;

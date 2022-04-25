@@ -5,7 +5,7 @@ use std::{
 
 use aes_gcm::{
     aead::{generic_array::GenericArray, AeadInPlace, NewAead},
-    Aes256Gcm, Key, Nonce,
+    Aes256Gcm,
 };
 
 use bytes::Bytes;

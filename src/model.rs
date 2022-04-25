@@ -10,10 +10,13 @@ pub enum BlackPacket {
 #[derive(Deserialize, Serialize)]
 pub enum Authenticate {
     #[serde(with = "BigArray")]
-    Init([u8; 56]),
-    ReturnToken([u8; 32]),
-    #[serde(with = "BigArray")]
-    ReturnSig([u8; 64]),
+    Token([u8; 32]),
+    OnionAndSig {
+        #[serde(with = "BigArray")]
+        onion: [u8; 56],
+        #[serde(with = "BigArray")]
+        sig: [u8; 64],
+    },
 }
 
 #[derive(Deserialize, Serialize)]

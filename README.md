@@ -19,9 +19,8 @@ This is a project that I worked on and dropped a year ago. I'm rebuilding it fro
   - [ ] Interface to accept connection requests to other peers
   - [x] Global state to keep track of all connected peers
   - [ ] Authentication (to prove that the peer connecting to you is who they say they are)
-    - [ ] Peer will send you the onion address that they claim to be
     - [ ] You will send a random 256-bit token to the peer
-    - [ ] The peer will use its Tor hidden service's ed25519 secret key to sign the token
+    - [ ] Peer will send you the onion address that they claim to be and also the sign the token using their ed25519 key and send the signatture
     - [ ] You will verify the signature by deriving the ed25519 public key from the onion address
     - [x] There is no need for you to prove who you are to them as they are the ones connecting to your onion address and Tor proves it internally
 - [ ] Cryptography (post-quantum hybrid approach)
