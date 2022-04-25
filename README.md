@@ -15,13 +15,13 @@ This is a project that I worked on and dropped a year ago. I'm rebuilding it fro
   - [x] Ctrl+C and `SIGTERM` handler in parent process that will send Tor a `SIGTERM` before terminating
   - [x] Asynchronous loop to monitor the condition of Tor (i.e. if it exits, then terminate the parent process for now)
 - [ ] P2P connections
-  - [ ] Unix socket to listen to incoming connections from Tor
+  - [x] Unix socket to listen to incoming connections from Tor
   - [ ] Interface to accept connection requests to other peers
   - [x] Global state to keep track of all connected peers
-  - [ ] Authentication (to prove that the peer connecting to you is who they say they are)
-    - [ ] You will send a random 256-bit token to the peer
-    - [ ] Peer will send you the onion address that they claim to be and also the sign the token using their ed25519 key and send the signatture
-    - [ ] You will verify the signature by deriving the ed25519 public key from the onion address
+  - [x] Authentication (to prove that the peer connecting to you is who they say they are)
+    - [x] You will send a random 256-bit token to the peer
+    - [x] Peer will send you the onion address that they claim to be and also the sign the token using their ed25519 key and send the signatture
+    - [x] You will verify the signature by deriving the ed25519 public key from the onion address
     - [x] There is no need for you to prove who you are to them as they are the ones connecting to your onion address and Tor proves it internally
 - [ ] Cryptography (post-quantum hybrid approach)
   - [x] Tor already encrypts traffic with classical methods
