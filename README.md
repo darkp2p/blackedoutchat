@@ -28,7 +28,8 @@ This is a project that I worked on and dropped a year ago. I'm rebuilding it fro
   - [x] Post-quantum key exchange between peers
   - [ ] A post-quantum public key must be shared between peers on first connect and saved. Use this to send tokens and verify signatures
 - [ ] Storage (chat messages, peer info, etc.)
-  - [ ] Evaluate which method of data storage is most suitable
+  - [x] Evaluate which method of data storage is most suitable (diesel with sqlite and potentially other backends later)
+  - [ ] A message handler that passes messages to the data storage as well as all currently connected clients
 - [ ] Client (web based)
   - [ ] A local WebSocket server which your browser can connect to
     - [ ] Password authentication using OPAQUE

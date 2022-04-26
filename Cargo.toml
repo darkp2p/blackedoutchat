@@ -22,6 +22,9 @@ ed25519-dalek = "1.0"
 pqcrypto = "0.15"
 sha3 = "0.10"
 
+# Databases
+diesel = "1.4"
+
 # Utilities
 bson = "2.2"
 bytes = "1.1"
@@ -33,3 +36,7 @@ rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde-big-array = "0.4"
 toml = "0.5"
+
+[features]
+default = ["storage-sqlite"]
+storage-sqlite = ["diesel/sqlite"]

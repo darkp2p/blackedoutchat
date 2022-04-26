@@ -7,6 +7,7 @@ mod handler;
 mod model;
 mod secure;
 mod state;
+mod storage;
 mod tor;
 
 use futures::future::try_join3;
