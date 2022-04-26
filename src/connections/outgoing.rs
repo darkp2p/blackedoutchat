@@ -46,16 +46,16 @@ async fn handle_request(
     secret_key: ExpandedSecretKey,
 ) -> Result<()> {
     let peer_key = super::decode_onion(&hostname)?;
-    let hostname = String::from_utf8(hostname.into())
+    let target_addr = String::from_utf8(hostname.into())
         .map_err(|_| BlackedoutError::BadHostname)
         .map(|mut x| {
-            x.push_str(".onion");
-            x
+            x.push_str(".onion:21761");
+            x.to_lowercase()
         })?;
 
     let mut stream = UnixStream::connect(PathBuf::new().join("data").join("tor.sock"))
         .map_err(Into::into)
-        .and_then(|socket| Socks5Stream::connect_with_socket(socket, hostname))
+        .and_then(|socket| Socks5Stream::connect_with_socket(socket, target_addr))
         .map_err(Into::into)
         .and_then(|stream| SecureStream::new(stream, false))
         .await?;

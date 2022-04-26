@@ -20,7 +20,10 @@ pub fn get_onion_data(config: &Config) -> Result<HashMap<[u8; 32], Onion>> {
         .addresses
         .iter()
         .map(|addr| {
-            let root = PathBuf::new().join("data").join(&addr.name);
+            let root = PathBuf::new()
+                .join("data")
+                .join("incoming")
+                .join(&addr.name);
 
             fs::read_to_string(root.join("hostname"))
                 .and_then(|hostname| {
@@ -30,6 +33,12 @@ pub fn get_onion_data(config: &Config) -> Result<HashMap<[u8; 32], Onion>> {
                 .and_then(|(hostname, secret)| {
                     if secret.len() < 64 {
                         return Err(BlackedoutError::TorBadSecretKey {
+                            address: addr.name.clone(),
+                        });
+                    }
+
+                    if hostname.len() < 56 {
+                        return Err(BlackedoutError::TorBadHostname {
                             address: addr.name.clone(),
                         });
                     }
@@ -45,11 +54,11 @@ pub fn get_onion_data(config: &Config) -> Result<HashMap<[u8; 32], Onion>> {
                         *public_key.as_bytes(),
                         Onion {
                             name: addr.name.clone(),
-                            hostname: hostname.as_bytes().try_into().map_err(|_| {
-                                BlackedoutError::TorBadHostname {
+                            hostname: hostname.to_uppercase().as_bytes()[..56]
+                                .try_into()
+                                .map_err(|_| BlackedoutError::TorBadHostname {
                                     address: addr.name.clone(),
-                                }
-                            })?,
+                                })?,
                             public_key,
                             secret_key,
                         },

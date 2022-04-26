@@ -1,0 +1,1 @@
+1. Remove all potential panics as that will kill the Tor process without any cleanup

@@ -1,4 +1,5 @@
 use std::{
+    fs::remove_file,
     os::unix::net::UnixListener,
     path::PathBuf,
     sync::{Arc, Mutex},
@@ -34,27 +35,31 @@ pub async fn start_incoming(
         .iter()
         .map(|(key, addr)| (*key, addr.onion.name.clone()))
         .map(|(key, addr)| {
-            UnixListener::bind(
-                PathBuf::new()
-                    .join("data")
-                    .join("incoming")
-                    .join(&addr)
-                    .with_extension("sock"),
-            )
-            .and_then(|listener| {
-                listener
-                    .set_nonblocking(true)
-                    .and_then(|_| AsyncUnixListener::from_std(listener))
-                    .and_then(|listener| {
-                        Ok(poll_fn(move |cx| {
-                            listener
-                                .poll_accept(cx)
-                                .map(|x| Some(x.map(|(x, _)| (x, key))))
-                                .map_err(|e| BlackedoutError::from(e))
-                        }))
-                    })
-            })
-            .map_err(Into::into)
+            let path = PathBuf::new()
+                .join("data")
+                .join("incoming")
+                .join(&addr)
+                .join("incoming.sock");
+
+            if path.exists() {
+                remove_file(&path)?;
+            }
+
+            UnixListener::bind(path)
+                .and_then(|listener| {
+                    listener
+                        .set_nonblocking(true)
+                        .and_then(|_| AsyncUnixListener::from_std(listener))
+                        .and_then(|listener| {
+                            Ok(poll_fn(move |cx| {
+                                listener
+                                    .poll_accept(cx)
+                                    .map(|x| Some(x.map(|(x, _)| (x, key))))
+                                    .map_err(|e| BlackedoutError::from(e))
+                            }))
+                        })
+                })
+                .map_err(Into::into)
         })
         .collect::<Result<Vec<_>>>()?;
 
