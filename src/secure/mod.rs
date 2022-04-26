@@ -14,9 +14,9 @@ use rand::RngCore;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
+use crate::connections::model::BlackPacket;
 use crate::crypto::handshake;
 use crate::error::{BlackedoutError, Result};
-use crate::model::BlackPacket;
 
 pub struct SecureStream<S: AsyncRead + AsyncWrite + Unpin> {
     inner: Framed<S, LengthDelimitedCodec>,

@@ -83,13 +83,14 @@ fn create_tmprc(config: &Config) -> Result<()> {
     tmprc.push_str("\n");
 
     config.addresses.addresses.iter().for_each(|x| {
-        tmprc.push_str("HiddenServiceDir data/");
+        tmprc.push_str("HiddenServiceDir data/incoming/");
         tmprc.push_str(&x.name);
         tmprc.push_str("\n");
         tmprc.push_str("HiddenServicePort 21761 unix:");
         tmprc.push_str(
             &current
                 .join("data")
+                .join("incoming")
                 .join(&x.name)
                 .join("incoming")
                 .with_extension("sock")

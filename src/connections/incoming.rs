@@ -4,39 +4,41 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use data_encoding::BASE32;
 use ed25519_dalek::{PublicKey, Signature, Verifier};
 use futures::{
-    future::{ready, select, Either, TryFutureExt},
+    future::{ready, TryFutureExt},
     stream::{poll_fn, select_all, StreamExt},
     SinkExt,
 };
-use tokio::{
-    net::{UnixListener as AsyncUnixListener, UnixStream},
-    sync::mpsc::{channel, Receiver},
-};
-use tokio_stream::wrappers::ReceiverStream;
+use tokio::net::{UnixListener as AsyncUnixListener, UnixStream};
 
 use crate::{
-    config::{Address, Config},
+    config::Config,
     error::{BlackedoutError, Result},
-    model::{Authenticate, BlackPacket, Data},
     secure::SecureStream,
     state::State,
+    storage::Storage,
 };
 
-pub async fn start_incoming(config: &Config, state: Arc<Mutex<State>>) -> Result<()> {
-    let listeners = config
+use super::model::{Authenticate, BlackPacket};
+
+pub async fn start_incoming(
+    _config: &Config,
+    state: &Arc<Mutex<State>>,
+    storage: &Arc<Storage>,
+) -> Result<()> {
+    let listeners = state
+        .lock()
+        .unwrap()
         .addresses
-        .addresses
-        .clone()
-        .into_iter()
-        .map(|addr| {
+        .iter()
+        .map(|(key, addr)| (*key, addr.onion.name.clone()))
+        .map(|(key, addr)| {
             UnixListener::bind(
                 PathBuf::new()
                     .join("data")
                     .join("incoming")
-                    .join(&addr.name)
+                    .join(&addr)
                     .with_extension("sock"),
             )
             .and_then(|listener| {
@@ -47,7 +49,7 @@ pub async fn start_incoming(config: &Config, state: Arc<Mutex<State>>) -> Result
                         Ok(poll_fn(move |cx| {
                             listener
                                 .poll_accept(cx)
-                                .map(|x| Some(x.map(|(x, _)| (x, addr.clone()))))
+                                .map(|x| Some(x.map(|(x, _)| (x, key))))
                                 .map_err(|e| BlackedoutError::from(e))
                         }))
                     })
@@ -57,15 +59,21 @@ pub async fn start_incoming(config: &Config, state: Arc<Mutex<State>>) -> Result
         .collect::<Result<Vec<_>>>()?;
 
     select_all(listeners)
-        .for_each(|x| handle_connection(x, &state))
+        .for_each(|x| handle_connection(x, &state, &storage))
         .await;
 
     Ok(())
 }
 
-async fn handle_connection(stream: Result<(UnixStream, Address)>, state: &Arc<Mutex<State>>) {
+async fn handle_connection(
+    stream: Result<(UnixStream, [u8; 32])>,
+    state: &Arc<Mutex<State>>,
+    storage: &Arc<Storage>,
+) {
     let (mut stream, addr, token) = match ready(stream)
-        .and_then(|(stream, addr)| SecureStream::new(stream, true).map_ok(|stream| (stream, addr)))
+        .and_then(|(stream, addr)| {
+            SecureStream::new(stream, true).map_ok(move |stream| (stream, addr))
+        })
         .and_then(|(mut stream, addr)| async move {
             // Send 32-byte token for the peer to sign
             let token = rand::random();
@@ -84,10 +92,17 @@ async fn handle_connection(stream: Result<(UnixStream, Address)>, state: &Arc<Mu
         }
     };
 
-    let state = state.clone();
-    let (tx, rx): (_, Receiver<Data>) = channel(1);
+    let host_key = *state
+        .lock()
+        .unwrap()
+        .addresses
+        .get(&addr)
+        .unwrap()
+        .onion
+        .public_key
+        .as_bytes();
 
-    let peer_pub = match stream
+    let peer_key = match stream
         .next()
         .await
         .ok_or(BlackedoutError::ConnectionClosed)
@@ -101,68 +116,15 @@ async fn handle_connection(stream: Result<(UnixStream, Address)>, state: &Arc<Mu
         }
     };
 
-    state
-        .lock()
-        .unwrap()
-        .addresses
-        .get_mut(&addr.name)
-        .unwrap()
-        .connected_peers
-        .insert(peer_pub, tx);
-
-    let (mut stream_tx, stream_rx) = stream.split();
-
-    let mut to_peer = ReceiverStream::new(rx);
-    let mut from_peer = stream_rx.map(|x| {
-        x.and_then(|x| match x {
-            BlackPacket::Data(n) => Ok(n),
-            _ => Err(BlackedoutError::WrongPacketType {
-                description: "Expected a Data packet".to_string(),
-            }),
-        })
-    });
-
-    tokio::spawn(async move {
-        loop {
-            let (data, send_to_peer) = match select(to_peer.next(), from_peer.next()).await {
-                Either::Left((n, _)) => match n {
-                    Some(n) => (n, true),
-                    None => break,
-                },
-                Either::Right((n, _)) => match n {
-                    Some(Ok(n)) => (n, false),
-                    Some(Err(_)) => {
-                        // TODO: Error handling
-                        // The peer sent a wrong packet type so disconnect it here
-                        break;
-                    }
-                    None => break,
-                },
-            };
-
-            if send_to_peer {
-                match stream_tx.send(BlackPacket::Data(data)).await {
-                    Ok(_) => {}
-                    Err(_e) => {
-                        // TODO: Error handling
-                        continue;
-                    }
-                }
-            }
-        }
-
-        state
-            .lock()
-            .unwrap()
-            .addresses
-            .get_mut(&addr.name)
-            .unwrap()
-            .connected_peers
-            .remove(&peer_pub);
-
-        to_peer.into_inner().close();
-        stream_tx.close().await.ok();
-    });
+    super::connection_loop(
+        state.clone(),
+        storage.clone(),
+        stream,
+        addr,
+        peer_key,
+        host_key,
+    )
+    .await;
 }
 
 fn verify_sign(packet: BlackPacket, token: [u8; 32]) -> Result<[u8; 32]> {
@@ -182,23 +144,17 @@ fn verify_sign(packet: BlackPacket, token: [u8; 32]) -> Result<[u8; 32]> {
         }
     };
 
-    let decoded_onion = BASE32
-        .decode(&onion)
-        .map_err(|e| BlackedoutError::Base32Error(e))?;
-
-    if decoded_onion.len() < 32 {
-        return Err(BlackedoutError::BadHostname);
-    }
-
-    PublicKey::from_bytes(&decoded_onion[..32])
-        .map_err(|_| BlackedoutError::BadPublicKey)
+    super::decode_onion(&onion)
+        .and_then(|decoded| {
+            PublicKey::from_bytes(&decoded).map_err(|_| BlackedoutError::BadPublicKey)
+        })
         .and_then(|public_key| {
             Signature::from_bytes(&sig)
                 .map_err(|_| BlackedoutError::BadSignature)
                 .and_then(|signature| {
                     public_key
                         .verify(&token, &signature)
-                        .map(|_| decoded_onion[..32].try_into().unwrap())
+                        .map(|_| *public_key.as_bytes())
                         .map_err(|_| BlackedoutError::SignatureVerificationFailed)
                 })
         })

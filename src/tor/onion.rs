@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs, path::PathBuf};
 
-use ed25519_dalek::SecretKey;
+use ed25519_dalek::{ExpandedSecretKey, PublicKey};
 
 use crate::{
     config::Config,
@@ -10,10 +10,11 @@ use crate::{
 pub struct Onion {
     pub name: String,
     pub hostname: [u8; 56],
-    pub secret_key: SecretKey,
+    pub public_key: PublicKey,
+    pub secret_key: ExpandedSecretKey,
 }
 
-pub fn get_onion_data(config: &Config) -> Result<HashMap<String, Onion>> {
+pub fn get_onion_data(config: &Config) -> Result<HashMap<[u8; 32], Onion>> {
     config
         .addresses
         .addresses
@@ -33,8 +34,15 @@ pub fn get_onion_data(config: &Config) -> Result<HashMap<String, Onion>> {
                         });
                     }
 
+                    let secret_key = ExpandedSecretKey::from_bytes(&secret[secret.len() - 64..])
+                        .map_err(|_| BlackedoutError::TorBadSecretKey {
+                            address: addr.name.clone(),
+                        })?;
+
+                    let public_key = PublicKey::from(&secret_key);
+
                     Ok((
-                        addr.name.clone(),
+                        *public_key.as_bytes(),
                         Onion {
                             name: addr.name.clone(),
                             hostname: hostname.as_bytes().try_into().map_err(|_| {
@@ -42,10 +50,8 @@ pub fn get_onion_data(config: &Config) -> Result<HashMap<String, Onion>> {
                                     address: addr.name.clone(),
                                 }
                             })?,
-                            secret_key: SecretKey::from_bytes(&secret[secret.len() - 64..])
-                                .map_err(|_| BlackedoutError::TorBadSecretKey {
-                                    address: addr.name.clone(),
-                                })?,
+                            public_key,
+                            secret_key,
                         },
                     ))
                 })

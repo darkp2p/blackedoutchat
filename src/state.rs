@@ -4,18 +4,18 @@ use tokio::sync::mpsc::Sender;
 
 use crate::{
     config::Config,
+    connections::model::Data,
     error::Result,
-    model::Data,
     tor::onion::{get_onion_data, Onion},
 };
 
 pub struct State {
-    pub addresses: HashMap<String, AddressState>,
+    pub addresses: HashMap<[u8; 32], AddressState>,
 }
 
 pub struct AddressState {
     pub onion: Onion,
-    pub connected_peers: HashMap<[u8; 32], Sender<Data>>,
+    pub connected_peers: HashMap<[u8; 32], Sender<([u8; 12], Data)>>,
 }
 
 impl State {

@@ -6,6 +6,7 @@ pub enum BlackedoutError {
     BadHostname,
     BadPublicKey,
     BadSignature,
+    SocksError(tokio_socks::Error),
     SignatureVerificationFailed,
     Base32Error(data_encoding::DecodeError),
     BsonError(bson::de::Error),
@@ -23,6 +24,12 @@ pub type Result<T> = std::result::Result<T, BlackedoutError>;
 impl From<bson::de::Error> for BlackedoutError {
     fn from(e: bson::de::Error) -> Self {
         BlackedoutError::BsonError(e)
+    }
+}
+
+impl From<tokio_socks::Error> for BlackedoutError {
+    fn from(e: tokio_socks::Error) -> Self {
+        BlackedoutError::SocksError(e)
     }
 }
 
