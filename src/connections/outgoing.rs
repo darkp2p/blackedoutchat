@@ -1,13 +1,13 @@
-use std::{
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
+use std::{path::PathBuf, sync::Arc};
 
-use ed25519_dalek::{ExpandedSecretKey, PublicKey};
+use ed25519_dalek::ExpandedSecretKey;
 use futures::{SinkExt, StreamExt, TryFutureExt};
 use tokio::{
     net::UnixStream,
-    sync::mpsc::{Receiver, Sender},
+    sync::{
+        mpsc::{Receiver, Sender},
+        Mutex,
+    },
 };
 use tokio_socks::tcp::Socks5Stream;
 
@@ -17,6 +17,7 @@ use crate::{
     secure::SecureStream,
     state::State,
     storage::Storage,
+    types::PublicKey,
 };
 
 use super::model::{Authenticate, BlackPacket};
@@ -25,11 +26,11 @@ pub async fn start_outgoing(
     config: &Config,
     state: &Arc<Mutex<State>>,
     storage: &Arc<Storage>,
-    mut rx: Receiver<([u8; 56], [u8; 56], ExpandedSecretKey, Sender<Result<()>>)>,
+    mut rx: Receiver<(PublicKey, PublicKey, Sender<Result<()>>)>,
 ) -> Result<()> {
-    while let Some((hostname, addr, secret_key, reply)) = rx.recv().await {
+    while let Some((peer_public_key, host_public_key, reply)) = rx.recv().await {
         reply
-            .send(handle_request(config, state, storage, hostname, addr, secret_key).await)
+            .send(handle_request(config, state, storage, peer_public_key, host_public_key).await)
             .await
             .ok();
     }
@@ -41,17 +42,22 @@ async fn handle_request(
     _config: &Config,
     state: &Arc<Mutex<State>>,
     storage: &Arc<Storage>,
-    hostname: [u8; 56],
-    address: [u8; 56],
-    secret_key: ExpandedSecretKey,
+    peer_public_key: PublicKey,
+    host_public_key: PublicKey,
 ) -> Result<()> {
-    let peer_key = super::decode_onion(&hostname)?;
-    let target_addr = String::from_utf8(hostname.into())
-        .map_err(|_| BlackedoutError::BadHostname)
-        .map(|mut x| {
-            x.push_str(".onion:21761");
-            x.to_lowercase()
-        })?;
+    let target_addr = format!("{}:21761", peer_public_key.to_onion_address());
+    let host_secret_key = ExpandedSecretKey::from_bytes(
+        &state
+            .lock()
+            .await
+            .addresses
+            .get(&host_public_key)
+            .unwrap()
+            .onion
+            .secret_key
+            .to_bytes(),
+    )
+    .unwrap();
 
     let mut stream = UnixStream::connect(PathBuf::new().join("data").join("tor.sock"))
         .map_err(Into::into)
@@ -67,31 +73,27 @@ async fn handle_request(
     {
         BlackPacket::Authenticate(Authenticate::Token(n)) => n,
         _ => {
-            return Err(BlackedoutError::WrongPacketType {
-                description: "Expected an Authenticate::Token packet".to_string(),
-            })
+            return Err(BlackedoutError::WrongPacketType(
+                "Expected an Authenticate::Token packet".to_string(),
+            ))
         }
     };
 
-    let public_key = PublicKey::from(&secret_key);
-    let signature = secret_key.sign(&token, &public_key);
+    let signature = host_public_key.sign(&token, &host_secret_key);
 
     stream
         .send(BlackPacket::Authenticate(Authenticate::OnionAndSig {
-            onion: address,
+            pub_key: host_public_key,
             sig: signature.to_bytes(),
         }))
         .await?;
-
-    let address = super::decode_onion(&address)?;
 
     super::connection_loop(
         state.clone(),
         storage.clone(),
         stream,
-        address,
-        peer_key,
-        *public_key.as_bytes(),
+        peer_public_key,
+        host_public_key,
     )
     .await;
 

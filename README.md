@@ -32,6 +32,7 @@ This is a project that I worked on and dropped a year ago. I'm rebuilding it fro
   - [x] A message handler that passes messages to the data storage as well as all currently connected clients
   - [ ] Actually store the messages
 - [ ] Client (web based)
-  - [ ] A local WebSocket server which your browser can connect to
-    - [ ] Password authentication using OPAQUE
-    - [ ] (TODO client features)
+  - [x] Local webapp UI
+  - [x] A local WebSocket server which your browser can connect to
+  - [ ] Password authentication using OPAQUE
+  - [ ] (TODO client features)

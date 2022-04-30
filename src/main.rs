@@ -8,10 +8,12 @@ mod secure;
 mod state;
 mod storage;
 mod tor;
+mod types;
 
-use futures::future::try_join3;
-use std::sync::{Arc, Mutex};
-use tokio::sync::mpsc::channel;
+use std::sync::Arc;
+
+use futures::future::try_join4;
+use tokio::sync::{mpsc::channel, Mutex};
 
 use crate::config::Config;
 use crate::connections::{incoming, outgoing};
@@ -33,6 +35,9 @@ async fn main() {
     let a = tor::handle_tor(control);
     let b = incoming::start_incoming(&config, &state, &storage);
     let c = outgoing::start_outgoing(&config, &state, &storage, outgoing_rx);
+    let d = client::start_clients(&config, &storage, &state, outgoing_tx);
 
-    if let Err(_e) = try_join3(a, b, c).await {}
+    println!("Start listening");
+
+    if let Err(_e) = try_join4(a, b, c, d).await {}
 }

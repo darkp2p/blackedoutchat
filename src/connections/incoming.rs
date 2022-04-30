@@ -1,17 +1,15 @@
-use std::{
-    fs::remove_file,
-    os::unix::net::UnixListener,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
+use std::{fs::remove_file, os::unix::net::UnixListener, path::PathBuf, sync::Arc};
 
-use ed25519_dalek::{PublicKey, Signature, Verifier};
+use ed25519_dalek::Signature;
 use futures::{
     future::{ready, TryFutureExt},
     stream::{poll_fn, select_all, StreamExt},
     SinkExt,
 };
-use tokio::net::{UnixListener as AsyncUnixListener, UnixStream};
+use tokio::{
+    net::{UnixListener as AsyncUnixListener, UnixStream},
+    sync::Mutex,
+};
 
 use crate::{
     config::Config,
@@ -19,6 +17,7 @@ use crate::{
     secure::SecureStream,
     state::State,
     storage::Storage,
+    types::PublicKey,
 };
 
 use super::model::{Authenticate, BlackPacket};
@@ -30,7 +29,7 @@ pub async fn start_incoming(
 ) -> Result<()> {
     let listeners = state
         .lock()
-        .unwrap()
+        .await
         .addresses
         .iter()
         .map(|(key, addr)| (*key, addr.onion.name.clone()))
@@ -71,11 +70,11 @@ pub async fn start_incoming(
 }
 
 async fn handle_connection(
-    stream: Result<(UnixStream, [u8; 32])>,
+    stream: Result<(UnixStream, PublicKey)>,
     state: &Arc<Mutex<State>>,
     storage: &Arc<Storage>,
 ) {
-    let (mut stream, addr, token) = match ready(stream)
+    let (mut stream, host_public_key, token) = match ready(stream)
         .and_then(|(stream, addr)| {
             SecureStream::new(stream, true).map_ok(move |stream| (stream, addr))
         })
@@ -97,17 +96,7 @@ async fn handle_connection(
         }
     };
 
-    let host_key = *state
-        .lock()
-        .unwrap()
-        .addresses
-        .get(&addr)
-        .unwrap()
-        .onion
-        .public_key
-        .as_bytes();
-
-    let peer_key = match stream
+    let peer_public_key = match stream
         .next()
         .await
         .ok_or(BlackedoutError::ConnectionClosed)
@@ -125,42 +114,30 @@ async fn handle_connection(
         state.clone(),
         storage.clone(),
         stream,
-        addr,
-        peer_key,
-        host_key,
+        peer_public_key,
+        host_public_key,
     )
     .await;
 }
 
-fn verify_sign(packet: BlackPacket, token: [u8; 32]) -> Result<[u8; 32]> {
-    let (onion, sig) = match packet {
+fn verify_sign(packet: BlackPacket, token: [u8; 32]) -> Result<PublicKey> {
+    let (pub_key, sig) = match packet {
         BlackPacket::Authenticate(auth) => match auth {
-            Authenticate::OnionAndSig { onion, sig } => (onion, sig),
+            Authenticate::OnionAndSig { pub_key, sig } => (pub_key, sig),
             _ => {
-                return Err(BlackedoutError::WrongPacketType {
-                    description: "Expected an Authenticate::OnionAndSig packet".to_string(),
-                });
+                return Err(BlackedoutError::WrongPacketType(
+                    "Expected an Authenticate::OnionAndSig packet".to_string(),
+                ));
             }
         },
         _ => {
-            return Err(BlackedoutError::WrongPacketType {
-                description: "Expected an Authenticate packet".to_string(),
-            });
+            return Err(BlackedoutError::WrongPacketType(
+                "Expected an Authenticate packet".to_string(),
+            ));
         }
     };
 
-    super::decode_onion(&onion)
-        .and_then(|decoded| {
-            PublicKey::from_bytes(&decoded).map_err(|_| BlackedoutError::BadPublicKey)
-        })
-        .and_then(|public_key| {
-            Signature::from_bytes(&sig)
-                .map_err(|_| BlackedoutError::BadSignature)
-                .and_then(|signature| {
-                    public_key
-                        .verify(&token, &signature)
-                        .map(|_| *public_key.as_bytes())
-                        .map_err(|_| BlackedoutError::SignatureVerificationFailed)
-                })
-        })
+    Signature::from_bytes(&sig)
+        .map_err(|_| BlackedoutError::BadSignature)
+        .and_then(|signature| pub_key.verify(&token, &signature).map(|_| pub_key))
 }

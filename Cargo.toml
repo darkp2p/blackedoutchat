@@ -13,8 +13,10 @@ tokio-util = { version = "0.7", features = ["codec"] }
 tokio-stream = "0.1.8"
 
 # Network stuff
+axum = { version = "0.5", features = ["ws"] }
 tokio-socks = "0.5"
-tokio-tungstenite = "0.17"
+tower-http = { version = "0.3", features = ["fs"] }
+hyper = "0.14"
 
 # Cryptography
 aes-gcm = "0.9"
@@ -35,6 +37,8 @@ libc = "0.2"
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde-big-array = "0.4"
+serde_json = "1.0"
+strum = { version = "0.24", features = ["derive"] }
 toml = "0.5"
 
 [features]

@@ -1,20 +1,20 @@
 use std::{collections::HashMap, fs, path::PathBuf};
 
-use ed25519_dalek::{ExpandedSecretKey, PublicKey};
+use ed25519_dalek::{ExpandedSecretKey, PublicKey as Ed25519PubKey};
 
 use crate::{
     config::Config,
     error::{BlackedoutError, Result},
+    types::{PublicKey, FULL_ADDRESS_LENGTH},
 };
 
 pub struct Onion {
     pub name: String,
-    pub hostname: [u8; 56],
     pub public_key: PublicKey,
     pub secret_key: ExpandedSecretKey,
 }
 
-pub fn get_onion_data(config: &Config) -> Result<HashMap<[u8; 32], Onion>> {
+pub fn get_onion_data(config: &Config) -> Result<HashMap<PublicKey, Onion>> {
     config
         .addresses
         .addresses
@@ -32,33 +32,26 @@ pub fn get_onion_data(config: &Config) -> Result<HashMap<[u8; 32], Onion>> {
                 .map_err(Into::into)
                 .and_then(|(hostname, secret)| {
                     if secret.len() < 64 {
-                        return Err(BlackedoutError::TorBadSecretKey {
-                            address: addr.name.clone(),
-                        });
+                        return Err(BlackedoutError::BadSecretKey);
                     }
 
-                    if hostname.len() < 56 {
-                        return Err(BlackedoutError::TorBadHostname {
-                            address: addr.name.clone(),
-                        });
+                    if hostname.trim().len() != FULL_ADDRESS_LENGTH {
+                        return Err(BlackedoutError::BadHostname);
                     }
 
                     let secret_key = ExpandedSecretKey::from_bytes(&secret[secret.len() - 64..])
-                        .map_err(|_| BlackedoutError::TorBadSecretKey {
-                            address: addr.name.clone(),
-                        })?;
+                        .map_err(|_| BlackedoutError::BadSecretKey)?;
 
-                    let public_key = PublicKey::from(&secret_key);
+                    let public_key = PublicKey::from_onion_address(&hostname)?;
+
+                    (Ed25519PubKey::from(&secret_key).as_bytes() == public_key.as_bytes())
+                        .then(|| ())
+                        .ok_or(BlackedoutError::BadHostname)?;
 
                     Ok((
-                        *public_key.as_bytes(),
+                        public_key,
                         Onion {
                             name: addr.name.clone(),
-                            hostname: hostname.to_uppercase().as_bytes()[..56]
-                                .try_into()
-                                .map_err(|_| BlackedoutError::TorBadHostname {
-                                    address: addr.name.clone(),
-                                })?,
                             public_key,
                             secret_key,
                         },

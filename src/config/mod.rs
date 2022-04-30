@@ -1,4 +1,5 @@
 pub mod addresses;
+pub mod clients;
 pub mod storage;
 
 use serde::de::DeserializeOwned;
@@ -10,10 +11,12 @@ use std::io::ErrorKind;
 use std::path::PathBuf;
 
 pub use self::addresses::*;
+pub use self::clients::*;
 pub use self::storage::*;
 
 pub struct Config {
     pub addresses: Addresses,
+    pub clients: Clients,
     pub storage: Storages,
 }
 
@@ -21,6 +24,7 @@ impl Config {
     pub fn load() -> Self {
         Config {
             addresses: Addresses::load(),
+            clients: Clients::load(),
             storage: Storages::load(),
         }
     }
@@ -74,6 +78,11 @@ where
 #[test]
 fn test_serialize_addresses() {
     Addresses::test_serialize();
+}
+
+#[test]
+fn test_serialize_clients() {
+    Clients::test_serialize();
 }
 
 #[test]

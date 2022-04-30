@@ -2,10 +2,8 @@ pub mod incoming;
 pub mod model;
 pub mod outgoing;
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-use data_encoding::BASE32;
-use ed25519_dalek::PublicKey;
 use futures::{
     future::{select, Either},
     stream::StreamExt,
@@ -13,16 +11,16 @@ use futures::{
 };
 use tokio::{
     io::{AsyncRead, AsyncWrite},
-    sync::mpsc::{channel, Receiver},
+    sync::{
+        mpsc::{channel, Receiver},
+        Mutex,
+    },
 };
 use tokio_stream::wrappers::ReceiverStream;
 
 use crate::{
-    client::model::ClientPacket,
-    error::{BlackedoutError, Result},
-    secure::SecureStream,
-    state::State,
-    storage::Storage,
+    client::model::ClientPacket, error::BlackedoutError, secure::SecureStream, state::State,
+    storage::Storage, types::PublicKey,
 };
 
 use self::model::{BlackPacket, Data};
@@ -31,9 +29,8 @@ pub async fn connection_loop<S>(
     state: Arc<Mutex<State>>,
     storage: Arc<Storage>,
     stream: SecureStream<S>,
-    addr: [u8; 32],
-    peer_key: [u8; 32],
-    host_key: [u8; 32],
+    peer_public_key: PublicKey,
+    host_public_key: PublicKey,
 ) where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
@@ -41,12 +38,12 @@ pub async fn connection_loop<S>(
 
     state
         .lock()
-        .unwrap()
+        .await
         .addresses
-        .get_mut(&addr)
+        .get_mut(&host_public_key)
         .unwrap()
         .connected_peers
-        .insert(peer_key, tx);
+        .insert(peer_public_key, tx);
 
     let (mut stream_tx, stream_rx) = stream.split();
 
@@ -54,11 +51,18 @@ pub async fn connection_loop<S>(
     let mut from_peer = stream_rx.map(|x| {
         x.and_then(|x| match x {
             BlackPacket::Data(n) => Ok(n),
-            _ => Err(BlackedoutError::WrongPacketType {
-                description: "Expected a Data packet".to_string(),
-            }),
+            _ => Err(BlackedoutError::WrongPacketType(
+                "Expected a Data packet".to_string(),
+            )),
         })
     });
+
+    storage
+        .send_packet(ClientPacket::ConnectionEstablished {
+            peer_public_key,
+            host_public_key,
+        })
+        .await;
 
     tokio::spawn(async move {
         loop {
@@ -91,8 +95,8 @@ pub async fn connection_loop<S>(
                     ClientPacket::SendDataConfirmation { token }
                 }
                 None => ClientPacket::DataReceived {
-                    peer_key,
-                    host_key,
+                    peer_public_key,
+                    host_public_key,
                     data,
                 },
             };
@@ -102,28 +106,21 @@ pub async fn connection_loop<S>(
 
         state
             .lock()
-            .unwrap()
+            .await
             .addresses
-            .get_mut(&addr)
+            .get_mut(&host_public_key)
             .unwrap()
             .connected_peers
-            .remove(&peer_key);
+            .remove(&peer_public_key);
 
         to_peer.into_inner().close();
         stream_tx.close().await.ok();
+
+        storage
+            .send_packet(ClientPacket::Disconnected {
+                peer_public_key,
+                host_public_key,
+            })
+            .await;
     });
-}
-
-pub fn decode_onion(onion: &[u8; 56]) -> Result<[u8; 32]> {
-    let decoded_onion = BASE32
-        .decode(onion)
-        .map_err(|e| BlackedoutError::Base32Error(e))?;
-
-    if decoded_onion.len() < 32 {
-        return Err(BlackedoutError::BadHostname);
-    }
-
-    PublicKey::from_bytes(&decoded_onion[..32])
-        .map_err(|_| BlackedoutError::BadPublicKey)
-        .map(|public_key| *public_key.as_bytes())
 }

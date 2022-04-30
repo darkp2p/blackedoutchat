@@ -7,15 +7,16 @@ use crate::{
     connections::model::Data,
     error::Result,
     tor::onion::{get_onion_data, Onion},
+    types::PublicKey,
 };
 
 pub struct State {
-    pub addresses: HashMap<[u8; 32], AddressState>,
+    pub addresses: HashMap<PublicKey, AddressState>,
 }
 
 pub struct AddressState {
     pub onion: Onion,
-    pub connected_peers: HashMap<[u8; 32], Sender<([u8; 12], Data)>>,
+    pub connected_peers: HashMap<PublicKey, Sender<([u8; 12], Data)>>,
 }
 
 impl State {

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Blackedoutchat UI</title>
+
+    <style>
+        html,
+        body {
+            margin: 0;
+            background-color: rgb(14, 14, 14);
+            color: wheat;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .host_addresses {
+            display: flex;
+            padding: 1.5rem;
+            border-bottom: 1px solid white;
+        }
+
+        .host_address:not(:last-child) {
+            margin-right: 1.5rem;
+        }
+
+        .bottom {
+            display: flex;
+            height: 100%;
+        }
+
+        .peers {
+            border-right: 1px solid white;
+            width: 20%;
+            padding: 1rem;
+        }
+
+        .peer {
+            word-wrap: break-word;
+            padding: 0.5rem;
+            font-family: monospace;
+        }
+
+        .chat-panel {
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="host_addresses">
+        <div class="host_address">
+            default
+        </div>
+        <div class="host_address">
+            default2
+        </div>
+    </div>
+    <div class="bottom">
+        <div class="peers">
+            <div class="peer">pg6mmjiyjmcrsslvykfwnntlaru7p5svn6y2ymmju6nubxndf4pscryd</div>
+        </div>
+        <div class="chat-panel"></div>
+    </div>
+</body>
+
+</html>
