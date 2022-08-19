@@ -22,7 +22,7 @@ pub enum BlackedoutError {
     ConnectionClosed,
     TorShutdown(Box<BlackedoutError>),
     Io(std::io::Error),
-    PqCrypto(pqcrypto::traits::Error),
+    PqCrypto(pqcrypto_traits::Error),
     WrongPacketType(String),
     Unexpected,
 }
@@ -57,4 +57,4 @@ impl_from!(data_encoding::DecodeError, Base32Error);
 impl_from!(hyper::Error, Hyper);
 impl_from!(tokio_socks::Error, SocksError);
 impl_from!(std::io::Error, Io);
-impl_from!(pqcrypto::traits::Error, PqCrypto);
+impl_from!(pqcrypto_traits::Error, PqCrypto);

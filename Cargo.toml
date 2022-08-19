@@ -21,7 +21,8 @@ hyper = "0.14"
 # Cryptography
 aes-gcm = "0.9"
 ed25519-dalek = "1.0"
-pqcrypto = "0.15"
+pqcrypto-kyber = "0.7"
+pqcrypto-traits = "0.3"
 sha3 = "0.10"
 
 # Databases

@@ -141,7 +141,8 @@ dependencies = [
  "futures",
  "hyper",
  "libc",
- "pqcrypto",
+ "pqcrypto-kyber",
+ "pqcrypto-traits",
  "rand 0.8.5",
  "serde",
  "serde-big-array",
@@ -883,90 +884,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eb9f9e6e233e5c4a35559a617bf40a4ec447db2e84c20b55a6f83167b7e57872"
 
 [[package]]
-name = "pqcrypto"
-version = "0.15.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e10caefecccc56b78d30a6b46effa2360048104d668fb7cea944c0761f9c1f11"
-dependencies = [
- "pqcrypto-classicmceliece",
- "pqcrypto-dilithium",
- "pqcrypto-falcon",
- "pqcrypto-frodo",
- "pqcrypto-hqc",
- "pqcrypto-kyber",
- "pqcrypto-ntru",
- "pqcrypto-ntruprime",
- "pqcrypto-saber",
- "pqcrypto-sphincsplus",
- "pqcrypto-traits",
-]
-
-[[package]]
-name = "pqcrypto-classicmceliece"
-version = "0.1.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "058221b011ba4e1665060ee46c76a262fc0483219e284b83761f7cd0602da2aa"
-dependencies = [
- "cc",
- "glob",
- "libc",
- "pqcrypto-internals",
- "pqcrypto-traits",
-]
-
-[[package]]
-name = "pqcrypto-dilithium"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa4b9aa326173185297d00161c0b1d4b3b641308d16b5133d90775d5d56d123f"
-dependencies = [
- "cc",
- "glob",
- "libc",
- "pqcrypto-internals",
- "pqcrypto-traits",
-]
-
-[[package]]
-name = "pqcrypto-falcon"
-version = "0.2.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b6ee639378f80f29c4d9a14b7098f1d80c4d65b43f27d2bcfc87285a380f169"
-dependencies = [
- "cc",
- "glob",
- "libc",
- "pqcrypto-internals",
- "pqcrypto-traits",
-]
-
-[[package]]
-name = "pqcrypto-frodo"
-version = "0.4.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65122d9fc0f4c0bd4fe8d51caa2c662d0b43d1af8576eae3331ec6ea2240b5d2"
-dependencies = [
- "cc",
- "glob",
- "libc",
- "pqcrypto-internals",
- "pqcrypto-traits",
-]
-
-[[package]]
-name = "pqcrypto-hqc"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb20b1324e5b76497ba6f030dea222059f8a815c0e641a0ad5e1c4cc1afb5db6"
-dependencies = [
- "cc",
- "glob",
- "libc",
- "pqcrypto-internals",
- "pqcrypto-traits",
-]
-
-[[package]]
 name = "pqcrypto-internals"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -983,58 +900,6 @@ name = "pqcrypto-kyber"
 version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a17989a978f7d7c1496e38806ad9ff11f36eb8e419c562eafddbbf176af4a8a"
-dependencies = [
- "cc",
- "glob",
- "libc",
- "pqcrypto-internals",
- "pqcrypto-traits",
-]
-
-[[package]]
-name = "pqcrypto-ntru"
-version = "0.5.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5fd7546c95224f2b1bf24694f8270a4caff92f87c26d4e1602ca32488e3cd872"
-dependencies = [
- "cc",
- "glob",
- "libc",
- "pqcrypto-internals",
- "pqcrypto-traits",
-]
-
-[[package]]
-name = "pqcrypto-ntruprime"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9efad3ff41ac31e389e1e4577a7962ad382d14715cf19a127ec39170d231b0ae"
-dependencies = [
- "cc",
- "glob",
- "libc",
- "pqcrypto-internals",
- "pqcrypto-traits",
-]
-
-[[package]]
-name = "pqcrypto-saber"
-version = "0.1.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7453b631d7bd268fffadf70514cdf05c9e9fd9574e26eafb85b5b86402e34c5b"
-dependencies = [
- "cc",
- "glob",
- "libc",
- "pqcrypto-internals",
- "pqcrypto-traits",
-]
-
-[[package]]
-name = "pqcrypto-sphincsplus"
-version = "0.6.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b1ac9adfc6a5f52ca8dc4fef14a808386975e3ff82145ce0a21cbc3c5632946"
 dependencies = [
  "cc",
  "glob",

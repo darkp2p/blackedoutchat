@@ -1,5 +1,5 @@
-use pqcrypto::kem::{firesaber, kyber102490s, ntruhrss1373};
-use pqcrypto::traits::kem::{Ciphertext, PublicKey, SharedSecret};
+use pqcrypto_kyber::kyber102490s;
+use pqcrypto_traits::kem::{Ciphertext, PublicKey, SharedSecret};
 use sha3::{Digest, Sha3_256};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
@@ -38,13 +38,9 @@ pub async fn handshake<S: AsyncRead + AsyncWrite + Unpin>(
     let mut secrets = Vec::new();
 
     if alice {
-        handshake_a!(firesaber, stream, secrets);
         handshake_a!(kyber102490s, stream, secrets);
-        handshake_a!(ntruhrss1373, stream, secrets);
     } else {
-        handshake_b!(firesaber, stream, secrets);
         handshake_b!(kyber102490s, stream, secrets);
-        handshake_b!(ntruhrss1373, stream, secrets);
     }
 
     let mut sha = Sha3_256::new();
