@@ -23,6 +23,9 @@ use crate::storage::Storage;
 #[tokio::main]
 async fn main() {
     let config = Config::load();
+
+    println!("Waiting for Tor to start");
+
     let control = tor::spawn_tor(&config).expect("Failed to spawn Tor process");
 
     let storage = Arc::new(Storage::new(&config));
