@@ -31,7 +31,7 @@ use crate::{
     types::PublicKey,
 };
 
-use self::model::ClientPacket;
+use self::model::{ClientPacket, Initialize};
 
 type OutgoingTx = Sender<(PublicKey, PublicKey, Sender<Result<()>>)>;
 type FutureBoxed = Pin<Box<dyn Future<Output = Result<()>>>>;
@@ -144,7 +144,22 @@ async fn ws_socket_handler(
     Extension(outgoing_txt): Extension<OutgoingTx>,
     Extension(connected_clients): Extension<Arc<Mutex<ConnectedClients>>>,
 ) {
-    let (tx, mut rx) = socket.split();
+    let (mut tx, mut rx) = socket.split();
+
+    let connected_peers = state
+        .lock()
+        .await
+        .addresses
+        .iter()
+        .map(|(a, b)| (*a, b.connected_peers.keys().map(|x| *x).collect::<Vec<_>>()))
+        .collect();
+
+    tx.send(Message::Text(
+        serde_json::to_string(&ClientPacket::Initialize(Initialize { connected_peers })).unwrap(),
+    ))
+    .await
+    .unwrap();
+
     let id = rand::random();
     connected_clients.lock().await.insert(id, tx);
 

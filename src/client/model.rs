@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{connections::model::Data, types::PublicKey};
@@ -13,6 +15,7 @@ pub enum ClientPacket {
         peer_public_key: PublicKey,
         host_public_key: PublicKey,
     },
+    Initialize(Initialize),
     Disconnected {
         peer_public_key: PublicKey,
         host_public_key: PublicKey,
@@ -31,4 +34,9 @@ pub enum ClientPacket {
     SendDataConfirmation {
         token: [u8; 12],
     },
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Initialize {
+    pub connected_peers: HashMap<PublicKey, Vec<PublicKey>>,
 }

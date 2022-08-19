@@ -6,6 +6,7 @@ use std::{
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 use crate::client::model::ClientPacket;
+use crate::config::Config;
 
 pub struct Storage {
     storage_tx: Sender<ClientPacket>,
@@ -13,7 +14,7 @@ pub struct Storage {
 }
 
 impl Storage {
-    pub fn new() -> Self {
+    pub fn new(config: &Config) -> Self {
         let (storage_tx, mut storage_rx): (Sender<ClientPacket>, _) = channel(1);
         let subscribers = Arc::new(Mutex::new(Vec::new()));
         let sub0 = subscribers.clone();

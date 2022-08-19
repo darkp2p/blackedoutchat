@@ -25,7 +25,7 @@ async fn main() {
     let config = Config::load();
     let control = tor::spawn_tor(&config).expect("Failed to spawn Tor process");
 
-    let storage = Arc::new(Storage::new());
+    let storage = Arc::new(Storage::new(&config));
     let state = Arc::new(Mutex::new(
         State::new(&config).expect("Failed to initialize state"),
     ));
@@ -37,7 +37,7 @@ async fn main() {
     let c = outgoing::start_outgoing(&config, &state, &storage, outgoing_rx);
     let d = client::start_clients(&config, &storage, &state, outgoing_tx);
 
-    println!("Start listening");
+    println!("Running asynchronous loop");
 
     if let Err(_e) = try_join4(a, b, c, d).await {}
 }
