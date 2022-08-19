@@ -19,8 +19,12 @@ use tokio::{
 use tokio_stream::wrappers::ReceiverStream;
 
 use crate::{
-    client::model::ClientPacket, error::BlackedoutError, secure::SecureStream, state::State,
-    storage::Storage, types::PublicKey,
+    client::model::{ClientPacket, PeerHostPair},
+    error::BlackedoutError,
+    secure::SecureStream,
+    state::State,
+    storage::Storage,
+    types::PublicKey,
 };
 
 use self::model::{BlackPacket, Data};
@@ -58,10 +62,10 @@ pub async fn connection_loop<S>(
     });
 
     storage
-        .send_packet(ClientPacket::ConnectionEstablished {
+        .send_packet(ClientPacket::ConnectionEstablished(PeerHostPair {
             peer_public_key,
             host_public_key,
-        })
+        }))
         .await;
 
     tokio::spawn(async move {
@@ -95,8 +99,10 @@ pub async fn connection_loop<S>(
                     ClientPacket::SendDataConfirmation { token }
                 }
                 None => ClientPacket::DataReceived {
-                    peer_public_key,
-                    host_public_key,
+                    pair: PeerHostPair {
+                        peer_public_key,
+                        host_public_key,
+                    },
                     data,
                 },
             };
@@ -117,10 +123,10 @@ pub async fn connection_loop<S>(
         stream_tx.close().await.ok();
 
         storage
-            .send_packet(ClientPacket::Disconnected {
+            .send_packet(ClientPacket::Disconnected(PeerHostPair {
                 peer_public_key,
                 host_public_key,
-            })
+            }))
             .await;
     });
 }

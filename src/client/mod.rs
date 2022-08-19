@@ -31,7 +31,7 @@ use crate::{
     types::PublicKey,
 };
 
-use self::model::{ClientPacket, Initialize};
+use self::model::{ClientPacket, Initialize, PeerHostPair};
 
 type OutgoingTx = Sender<(PublicKey, PublicKey, Sender<Result<()>>)>;
 type FutureBoxed = Pin<Box<dyn Future<Output = Result<()>>>>;
@@ -99,28 +99,14 @@ pub async fn start_clients(
 }
 
 async fn connect_handler(
-    Json(packet): Json<ClientPacket>,
+    Json(packet): Json<PeerHostPair>,
     Extension(state): Extension<Arc<Mutex<State>>>,
     Extension(outgoing_txt): Extension<OutgoingTx>,
 ) -> std::result::Result<(), (StatusCode, Json<BlackedoutError>)> {
-    let (peer_public_key, host_public_key) = match packet {
-        ClientPacket::Connect {
-            peer_public_key,
-            host_public_key,
-        } => (peer_public_key, host_public_key),
-        _ => {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(BlackedoutError::WrongPacketType(
-                    "Expected a Connect packet".to_string(),
-                )),
-            ))
-        }
-    };
-
     let (tx, mut rx) = channel(1);
+
     outgoing_txt
-        .send((peer_public_key, host_public_key, tx))
+        .send((packet.peer_public_key, packet.host_public_key, tx))
         .await
         .unwrap();
 
@@ -178,21 +164,16 @@ async fn ws_socket_handler(
         };
 
         if let Err(e) = match n {
-            ClientPacket::SendData {
-                token,
-                peer_public_key,
-                host_public_key,
-                data,
-            } => {
+            ClientPacket::SendData { token, pair, data } => {
                 state
                     .lock()
                     .then(|state| async move {
                         state
                             .addresses
-                            .get(&host_public_key)
+                            .get(&pair.host_public_key)
                             .ok_or(BlackedoutError::HostPublicKeyDoesNotExist)?
                             .connected_peers
-                            .get(&peer_public_key)
+                            .get(&pair.peer_public_key)
                             .ok_or(BlackedoutError::PeerPublicKeyDoesNotExist)?
                             .send((token, data))
                             .map_err(|_| BlackedoutError::Unexpected)
