@@ -21,7 +21,7 @@ use tokio::sync::{
     mpsc::{channel, Sender},
     Mutex,
 };
-use tower_http::services::ServeDir;
+use tower_http::{cors::CorsLayer, services::ServeDir};
 
 use crate::{
     config::{Client, Config},
@@ -83,6 +83,7 @@ pub async fn start_clients(
                                 .layer(Extension(connected_clients))
                                 .layer(Extension(state.clone()))
                                 .layer(Extension(outgoing_tx.clone()))
+                                .layer(CorsLayer::permissive())
                                 .into_make_service(),
                         )
                         .map_err(Into::into),
@@ -163,11 +164,19 @@ async fn ws_socket_handler(
     let id = rand::random();
     connected_clients.lock().await.insert(id, tx);
 
-    while let Some(Ok(Ok(n))) = rx
+    while let Some(Ok(n)) = rx
         .next()
         .await
-        .map(|x| x.map(|x| bson::from_slice::<ClientPacket>(&x.into_data())))
+        .map(|x| x.map(|x| serde_json::from_slice::<ClientPacket>(&x.into_data())))
     {
+        let n = match n {
+            Ok(n) => n,
+            Err(e) => {
+                println!("Error deserializing client packet: {:?}", e);
+                continue;
+            }
+        };
+
         if let Err(e) = match n {
             ClientPacket::SendData {
                 token,

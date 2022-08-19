@@ -8,7 +8,7 @@ use sha3::{Digest, Sha3_256};
 
 use crate::error::{BlackedoutError, Result};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct PublicKey([u8; 32]);
 
 pub const FULL_ADDRESS_LENGTH: usize = 62;
@@ -102,6 +102,15 @@ impl<'de> Deserialize<'de> for PublicKey {
         }
 
         deserializer.deserialize_str(StrVisitor)
+    }
+}
+
+impl Serialize for PublicKey {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&BASE64.encode(&self.0))
     }
 }
 

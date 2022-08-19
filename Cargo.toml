@@ -15,7 +15,7 @@ tokio-stream = "0.1.8"
 # Network stuff
 axum = { version = "0.5", features = ["ws"] }
 tokio-socks = "0.5"
-tower-http = { version = "0.3", features = ["fs"] }
+tower-http = { version = "0.3", features = ["fs", "cors"] }
 hyper = "0.14"
 
 # Cryptography
@@ -39,6 +39,7 @@ rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde-big-array = "0.4"
 serde_json = "1.0"
+serde_with = { version = "2.0", features = ["base64"] }
 strum = { version = "0.24", features = ["derive"] }
 toml = "0.5"
 
