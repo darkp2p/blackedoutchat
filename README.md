@@ -7,6 +7,8 @@ TODO
 ## TODO
 This is a project that I worked on and dropped a year ago. I'm rebuilding it from scratch (started on 23rd April 2022).
 
+UPDATE 2023: Messages can now be sent between clients but there is no mechanism to store messages yet.
+
 - [x] Tor process wrapper
   - [x] Starting the process in a separate thread
   - [x] Configuring Tor to use Unix sockets to not conflict with existing Tor instances
